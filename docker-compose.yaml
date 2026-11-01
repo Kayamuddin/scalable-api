@@ -1,0 +1,73 @@
+services:
+  app1:
+    build: .
+    environment:
+      PORT: 3001
+      REDIS_URI: redis://redis:6379
+      MONGO_URI: mongodb://mongodb:27017/scalable_api
+      NODE_ENV: production
+      serverName: app1
+
+    depends_on:
+      - redis
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - scalableapi-network
+
+  app2:
+    build: .
+    environment:
+      PORT: 3002
+      REDIS_URI: redis://redis:6379
+      MONGO_URI: mongodb://mongodb:27017/scalable_api
+      NODE_ENV: production
+      serverName: app2
+    depends_on:
+      - redis
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - scalableapi-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app1
+      - app2
+    restart: unless-stopped
+    networks:
+      - scalableapi-network
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    expose:
+      - "27017"
+    restart: unless-stopped
+    networks:
+      - scalableapi-network
+
+  redis:
+    image: redis:alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    expose:
+      - "6379"
+    restart: unless-stopped
+    networks:
+      - scalableapi-network
+
+networks:
+  scalableapi-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  mongo-data:
